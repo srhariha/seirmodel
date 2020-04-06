@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body id="page-top" class="index">
+
+  <div class="row">
+    <div class="column">
+      <div id="epidemic"></div>
+    </div>
+    <div class="column">
+      <div id="graphDiv">
+    </div>
+  </div>
+
+  <br/>
+
+  <div class="row">
+    <table id="tSummary">
+       <tr>
+         <th>Day</th>
+         <th>Susceptible</th>
+         <th>Exposed</th>
+         <th>Infected-1</th>
+         <th>Infected-2</th>
+         <th>Infected (I1+I2)</th>
+         <th>Recovered</th>
+         <th>Total</th>
+       </tr>
+       <tr>
+         <td class="counts dayCount" id="daytd">0</td>
+         <td class="counts population" id="populationtd">0</td>
+         <td class="counts exposedCount" id="exposedCounttd">0</td>
+         <td class="counts infectedOneCount" id="infectedOneCounttd">0</td>
+         <td class="counts infectedTwoCount" id="infectedTwoCounttd">0</td>
+         <td class="counts infectedCount" id="infectedCounttd">0</td>
+         <td class="counts recoveredCount" id="recoveredCounttd">0</td>
+         <td class="counts population" id="totalCounttd">0</td>
+
+       </tr>
+    </table>
+  </div>
+
+  <h3> Day by Day Detail </h2>
+  <div class="row">
+    <table id="tData">
+       <tr>
+         <th>Day</th>
+         <th>Susceptible</th>
+         <th>Exposed</th>
+         <th>Infected-1</th>
+         <th>Infected-2</th>
+         <th>Infected (I1+I2)</th>
+         <th>Recovered</th>
+         <th>Total</th>
+       </tr>
+
+    </table>
+  </div>
+  <br/>
+
+  <div class="row">
+
+    <div class="column">
+
+
+      <button class="button" onclick="simulateButtonClick()">Simulate</button>
+      <button class="button" onclick="pause()">Pause</button>
+      <button class="button" onclick="reset()">Reset</button>
+
+      <div class="brc"><br></div>
+      <label for="NInput">N:</label>
+      <input id="NInput" name="NInput" size="10px" min="2" max="50">
+
+      <div class="brc"><br></div>
+      <label for="daysInput">Days:</label>
+      <input id="daysInput" name="daysInput" size="10px" min="2" max="100">
+
+      <div class="brc"><br></div>
+      <label for="betaInput">beta:</label>
+      <input id="betaInput" name="betaInput" size="10px" min="0" max="1">
+
+      <div class="brc"><br></div>
+      <label for="alphaOneInput">alphaOne:</label>
+      <input id="alphaOneInput" name="alphaOneInput" size="10px" min="0" max="1">
+
+      <div class="brc"><br></div>
+      <label for="alphaTwoInput">alphaTwo:</label>
+      <input id="alphaTwoInput" name="alphaTwoInput" size="10px" min="0" max="1">
+
+      <div class="brc"><br></div>
+      <label for="gammaInput">gamma:</label>
+      <input id="gammaInput" name="gammaInput" size="10px" min="0" max="1">
+
+      <div class="brc"><br></div>
+      <label for="movementRatioInput">speed:</label>
+      <input id="movementRatioInput" name="movementRatioInput" size="10px" min="1" max="100">
+
+      <div class="brc"><br></div>
+      <label for="spreadRadiusFactorInput">spreadRadius:</label>
+      <input id="spreadRadiusFactorInput" name="spreadRadiusFactorInput" size="10px" min="1" max="5">
+
+
+      <div style="height:20px;"><br></div>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://d3js.org/d3.v3.min.js"></script>
+  <script src="d3-grid.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="lattice_epidemic.js"></script>
+
+</body>
