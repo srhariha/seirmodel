@@ -33,7 +33,7 @@
 }
 
 .infectedCount {
-  background-color: rgb(255, 87, 51);
+  background-color: red;
 }
 
 .infectedOneCount {

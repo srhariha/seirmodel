@@ -2,9 +2,11 @@ var blue = d3.rgb(100,100,200),
     exposedColor = d3.rgb(218, 247, 166), // Exposed
     infectedOneColor = d3.rgb(255,87,51), // Infected_one
     infectedTwoColor = d3.rgb(144, 12, 63 ), // Infected_two`
-    recoveredColor = d3.rgb(200,200,200); // Recovered
+    recoveredColor = d3.rgb(200,200,200), // Recovered
+    infectedOneStrokeColor = d3.rgb(251, 223, 234);
 
 var beta,
+    q,
     alphaOne,
     alphaTwo,
     gamma,
@@ -98,6 +100,10 @@ distance = function(x1,y1,x2,y2) {
   //return  Math.abs(x2-x1);
 }
 
+var neighborCount = 0;
+var neighborSum = 0;
+var degreeOfContact;
+
 closestNeighbors = function(ind){
   neighbors =[];
   var currentX = d3.select("#individual-"+ind).attr("cx");
@@ -115,6 +121,9 @@ closestNeighbors = function(ind){
       }
     }
   }
+  neighborCount++;
+  neighborSum = neighborSum + neighbors.length;
+  degreeOfContact = neighborSum/neighborCount;
   return neighbors;
 }
 
@@ -124,7 +133,7 @@ function s2ione(sNode, neighbors) {
        var nNode = nodes[neighbors[ni]];
        if(nNode.state == 'INFECTED_ONE') {
          //console.log('Infected person ' + nNode.id + 'in contact with ' + sNode.id);
-         if(Math.random() <= beta) {
+         if(Math.random() <= beta*q) {
            //console.log('EXPOSED = ' + sNode.id);
            sNode.state = 'EXPOSED';
            break;
@@ -156,7 +165,6 @@ function itwo2recovered(iTwoNodes) {
 
 
 function simulate() {
-  randomMovement();
   day++;
   if(day > MAX_DAYS) {
    clearInterval(tick);
@@ -213,6 +221,7 @@ function simulate() {
   d3.select("#infectedCount").text("Infected : " + (infectedOneCount+infectedTwoCount)
   + "  (I1= " + infectedOneCount + ", I2=" + infectedTwoCount +")");
   d3.select("#recoveredCount").text("Recovered:" + recoveredCount);
+  d3.select("#degreeOfContact").text("Computed degreeOfContact = " + degreeOfContact);
   t += 1;
   data[0].x.push(t);
   data[0].y.push(sCount);
@@ -249,7 +258,7 @@ function simulate() {
   d3.select('#infectedCounttd').text(infectedOneCount + infectedTwoCount);
   d3.select('#recoveredCounttd').text(recoveredCount);
   d3.select('#totalCounttd').text(total);
-
+  randomMovement();
 
 }
 
@@ -287,11 +296,20 @@ function randomMovement() {
     }
 
 
-    d3.select("#individual-"+i).transition().duration(200)
-        .attr("cx", cx) // change this to random 2px
-        .attr("cy", cy) // change this to random 2px
+    var circle = d3.select("#individual-"+i);
+    circle.transition().duration(200)
+        .attr("cx", cx)
+        .attr("cy", cy)
         .each("end", function () {
     });
+
+    if(nodes[i].state == 'INFECTED_ONE') {
+      circle.attr("stroke-width",(distRadius - radius))
+      .attr("stroke",infectedOneColor)
+      .attr("stroke-opacity","0.5");
+    } else {
+      circle.attr("stroke-width",'0px');
+    }
   }
   smallSteps = true;
 }
@@ -313,6 +331,12 @@ function refreshInput() {
   betaInput.value = beta;
   betaInput.oninput = function() {
     beta = this.value;
+  }
+
+  qInput = document.getElementById("qInput");
+  qInput.value = q;
+  qInput.oninput = function() {
+    q = this.value;
   }
 
   alphaOneInput = document.getElementById("alphaOneInput");
@@ -438,18 +462,19 @@ function resetGraph(){
 
 
 function reset() {
-  N = 24;
+  N = 32;
   beta = 0.495;
+  q = 0.95;
   gamma = 1/9;
   alphaOne = 0.2;
   alphaTwo = 0.2;
   initExposeRatio = 0.002;
   day = 0;
   MAX_DAYS = 120;
-  movementRatio = 20;
-  spreadRadiusFactor = 1.5;
+  movementRatio = 30;
+  spreadRadiusFactor = 15;
   radius = height/(N*2.1);
-  distRadius = radius*spreadRadiusFactor;
+  distRadius = radius*spreadRadiusFactor/3;
 
   refreshInput();
   resetGraph();
