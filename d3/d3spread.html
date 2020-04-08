@@ -10,9 +10,11 @@
 
   <h2>Epidemic Model Simulation </h2>
   <div class="row">
-    <div class="column">
-      <button class="button" onclick="simulateButtonClick()">Simulate</button>
-      <button class="button" onclick="pause()">Pause</button>
+    <div class="buttonLayout">
+      <button class="button" onclick="sirSimulate()">SIR</button>
+      <button class="button" onclick="seirSimulate()">SEIR</button>
+      <button class="button" onclick="sei1i2rSimulate()">SEI1I2R</button>
+      <button class="button pauseButton" onclick="pause()">Pause</button>
     </div>
   </div>
   <div class="row">
@@ -22,26 +24,20 @@
     </div>
     <div id="graphDivContainer" class="column">
       <h3>Trend </h3>
+      <table id="tCounts">
+        <tr id="tCountsRowHeading">
+        </tr>
+        <tr id="tCountsRow">
+        </tr>
+      </table>
       <div id="graphDiv"> </div>
     </div>
-  </div>
-
-  <br/>
-
-
-  <div class="row">
-    <table id="tCounts">
-      <tr id="tCountsRowHeading">
-      </tr>
-      <tr id="tCountsRow">
-      </tr>
-    </table>
   </div>
 
 
 
   <h3> Parameters </h3>
-    <button class="button" onclick="updateParameter()">Update Parameter</button>
+    <button class="button" onclick="updateParameter()">Custom Simulation</button>
     <br/>
     <textarea id="parametersJson" sytle="display:none" cols="50" rows="50"></textarea>
 

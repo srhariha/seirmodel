@@ -24,6 +24,14 @@ var svg;
 /* Plotly*/
 var traceS = {};
 var data = [];
+var layout = {
+  showlegend: true,
+  legend: {
+    x: 1,
+    xanchor: 'right',
+    y: 1
+  }
+};
 
 class Bucket {
   constructor(bucketConfig) {
@@ -143,7 +151,7 @@ function contactTx(sNode, neighbors, bucket) {
 function txState(currentNodes, txRate, newState) {
   for(var e=0; e < currentNodes.length; e++) {
       if(Math.random() < txRate && currentNodes[e].t != day) {
-        console.log("[node-" + e + " changed from " + currentNodes[e].state + " to " + newState);
+        //console.log("[node-" + e + " changed from " + currentNodes[e].state + " to " + newState);
         currentNodes[e].state = newState;
         currentNodes[e].t = day;
       }
@@ -220,7 +228,7 @@ function updateGraph(day, sCount, bucketCounts) {
     data[j+1].y.push(bucketCounts[buckets[j].name]);
   }
 
-  Plotly.newPlot('graphDiv',data);
+  Plotly.newPlot('graphDiv',data, layout);
 }
 
 function updateTableRow(tCountsRow, day, sCount, bucketCounts) {
@@ -312,10 +320,24 @@ function randomMovement() {
 
 var tick;
 
-function simulateButtonClick() {
-   startsim();
-   //randomMovement();
-   tick = setInterval(simulate, simulateSpeed);
+function runSimulate(config) {
+  if(tick)
+    clearInterval(tick);
+  reset(config);
+  startsim();
+  tick = setInterval(simulate, simulateSpeed);
+}
+
+function sei1i2rSimulate() {
+  runSimulate(sei1i2rConfig);
+}
+
+function seirSimulate() {
+  runSimulate(seirConfig);
+}
+
+function sirSimulate() {
+   runSimulate(sirConfig);
 }
 
 function pause() {
@@ -352,13 +374,13 @@ function resetGraph(){
     };
     data.push(traceBucket);
   }
-  Plotly.newPlot('graphDiv',data);
+  Plotly.newPlot('graphDiv',data, layout);
 }
 
 
 function refreshTables() {
   d3.select("#tCountsRowHeading").remove();
-  d3.select("#tDetailsRowHeading").remove();
+  d3.select("#tData").selectAll("tr").remove();
 
   var tCountsRowHeading = d3.select('#tCounts').append('tr').attr('id', 'tCountsRowHeading');
   var tDetailsRowHeading = d3.select('#tData').append('tr').attr('id', 'tDetailsRowHeading');
@@ -373,7 +395,7 @@ function refreshTables() {
   }
 }
 
-var defaultConfig = {
+var sei1i2rConfig = {
   N:20,
   simulationPanel : {
     width:600,
@@ -415,10 +437,76 @@ var defaultConfig = {
   ]
 };
 
+var sirConfig = {
+    N: 20,
+    simulationPanel: {
+        width: 600,
+        height: 600
+    },
+    maxDays: 60,
+    movementRatio: 30,
+    spreadRadiusFactor: 3,
+    simulateSpeed:1000,
+    radius: 20,
+    buckets: [
+        {
+            name: "INFECTED",
+            color: "rgb(255,87,51)",
+            alpha: 0.11,
+            nextState: "RECOVERED",
+            contactSpreadFlag: true,
+            beta: 0.49,
+            q: 0.95,
+            contactSpreadState: "INFECTED",
+            initRatio: 0.02
+        },
+        {
+            name: "RECOVERED",
+            color: "rgb(200,200,200)"
+        }
+    ]
+};
+
+var seirConfig = {
+    N: 20,
+    simulationPanel: {
+        width: 600,
+        height: 600
+    },
+    maxDays: 60,
+    movementRatio: 30,
+    spreadRadiusFactor: 3,
+    simulateSpeed:1000,
+    radius: 20,
+    buckets: [
+     {
+    name: "EXPOSED",
+    color: "rgb(218, 247, 166)",
+    alpha: 0.2,
+    nextState: "INFECTED",
+    initRatio: 0.02
+      },
+        {
+            name: "INFECTED",
+            color: "rgb(255,87,51)",
+            alpha: 0.11,
+            nextState: "RECOVERED",
+            contactSpreadFlag: true,
+            beta: 0.49,
+            q: 0.95,
+            contactSpreadState: "EXPOSED",
+            initRatio: 0.02
+        },
+        {
+            name: "RECOVERED",
+            color: "rgb(200,200,200)"
+        }
+    ]
+};
 
 function updateParameter() {
   var config = JSON.parse(d3.select("#parametersJson").node().value);
-  reset(config);
+  runSimulate(config);
 }
 
 function reset(config) {
@@ -448,5 +536,5 @@ function reset(config) {
   d3.select("svg").remove();
 }
 
-reset(defaultConfig);
-Plotly.newPlot('graphDiv', data);
+//reset(defaultConfig);
+Plotly.newPlot('graphDiv', data, layout);

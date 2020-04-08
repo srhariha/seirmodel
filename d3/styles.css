@@ -68,25 +68,42 @@ label {
   color:rgb(100,200,100);
 }​
 
+
 td, th {
   width:200px;
+  border: 1px solid #ddd;
+  padding: 8px;
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
 }
 
 table, th, td {
-  border: 1px solid black;
   text-align: center;
 }
 
+th {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.buttonLayout {
+  text-align: center;
+}
+
+.pauseButton {
+  background-color: grey;
+}
 
 button {
   color: white;
-  background-color: #5DADE2;
+  background-color: #28B463;
   font-size: 14px;
-  border-radius: 25px;
-  padding: 10px;
+  border-radius: 15px;
+  padding: 20px;
+  margin: 10px;
+  width: 200px;
 }
 
-h2, h3, h4, th {
+h2, h3, h4 {
   color: #5DADE2;
 }
 
