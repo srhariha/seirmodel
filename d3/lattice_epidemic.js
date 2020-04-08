@@ -9,12 +9,11 @@ var beta,
     q,
     alphaOne,
     alphaTwo,
+    alphaOther,
     gamma,
     initExposeRatio;
 
 var nodes = [];
-var tableData = [];
-var tableColumns = ['SUSCEPTIBLE', 'EXPOSED','INFECTED_ONE','INFECTED_TWO','RECOVERED'];
 
 var width = 600,
     height = 600,
@@ -24,7 +23,7 @@ var day;
 var MAX_DAYS;
 var movementRatio;
 var spreadRadiusFactor;
-
+var infectedCompartments;
 
 var radius;
 var distRadius;
@@ -36,40 +35,57 @@ var svg;
 
 /* Plotly*/
 var traceS = {};
-var traceE = {};
-var traceI1 = {};
-var traceI2 = {};
-var traceI = {};
-var traceR = {};
-var t = 0;
-var data = [traceS, traceE, traceI1,traceI2,traceI,traceR];
+var data = [];
 
+class Bucket {
+  constructor(name, alpha, nextState, color,initRatio) {
+    this.name = name;
+    this.color = color;
+    this.alpha = alpha;
+    this.nextState = nextState;
+    this.initRatio = initRatio;
+  }
+
+  setContactSpreadState(beta, q, contactSpreadState) {
+    this.contactSpreadFlag = true;
+    this.beta = beta;
+    this.q = q;
+    this.contactSpreadState = contactSpreadState;
+  }
+}
+
+var buckets = [];
 
 var getCircleColor = function(d,i) {
     var col = blue;
-    if (nodes[i].state == 'EXPOSED'){
-        col = exposedColor;
-    } else if (nodes[i].state == 'INFECTED_ONE'){
-        col = infectedOneColor;
-    } else if (nodes[i].state == 'INFECTED_TWO'){
-        col = infectedTwoColor;
-    } else if(nodes[i].state == 'RECOVERED') {
-       col = recoveredColor;
+    for(var j=0; j < buckets.length; j++) {
+      if(nodes[i].state == buckets[j].name) {
+        return buckets[j].color;
+      }
     }
     return col;
 }
 
-var initState = function(d,i) {
+var initNode = function(d,i) {
   var n = {};
   n.id = i;
   n.radius = radius;
-  var exposeIndex = N*N*initExposeRatio;
-  if(i <= exposeIndex) {
-     n.state = 'EXPOSED';
-  } else {
-    n.state = 'SUSCEPTIBLE';
-  }
+  n.state = 'SUSCEPTIBLE';
+  n.t = 0;
   return n;
+}
+
+function initState() {
+  var stateIndex = 0;
+  for(var j=0; j < buckets.length; j++) {
+    if(buckets[j].initRatio > 0) {
+      var stateCount = (buckets[j].initRatio)*(nodes.length);
+      for(var k=stateIndex; k <= (stateIndex + stateCount); k++) {
+         nodes[k].state = buckets[j].name;
+      }
+      stateIndex += stateCount;
+    }
+  }
 }
 
 function startsim() {
@@ -79,9 +95,9 @@ function startsim() {
       height: height
     })
   .append("g");
-    //.attr("transform", "translate(70,70)");
 
-  nodes = d3.range(N*N).map(initState);
+  nodes = d3.range(N*N).map(initNode);
+  initState();
 
   var point = svg.selectAll("circle")
     .data(pointGrid(nodes));
@@ -95,16 +111,15 @@ function startsim() {
 }
 
 
-distance = function(x1,y1,x2,y2) {
+function distance(x1,y1,x2,y2) {
   return Math.sqrt( ((x2-x1)*(x2-x1)) + ((y2-y1)*(y2-y1)) );
-  //return  Math.abs(x2-x1);
 }
 
 var neighborCount = 0;
 var neighborSum = 0;
 var degreeOfContact;
 
-closestNeighbors = function(ind){
+function closestNeighbors(ind){
   neighbors =[];
   var currentX = d3.select("#individual-"+ind).attr("cx");
   var currentY = d3.select("#individual-"+ind).attr("cy");
@@ -127,15 +142,13 @@ closestNeighbors = function(ind){
   return neighbors;
 }
 
-function s2ione(sNode, neighbors) {
-  //console.log('Checking ' + sNode.id + " neighbors = " + neighbors);
+function contactTx(sNode, neighbors, bucket) {
   for(var ni=0; ni < neighbors.length; ni++) {
        var nNode = nodes[neighbors[ni]];
-       if(nNode.state == 'INFECTED_ONE') {
-         //console.log('Infected person ' + nNode.id + 'in contact with ' + sNode.id);
-         if(Math.random() <= beta*q) {
-           //console.log('EXPOSED = ' + sNode.id);
-           sNode.state = 'EXPOSED';
+       if(nNode.state == bucket.name && nNode.t != day) {
+         if(Math.random() <= bucket.beta*bucket.q) {
+           sNode.state = bucket.contactSpreadState;
+           sNode.t = day;
            break;
          }
        }
@@ -143,24 +156,13 @@ function s2ione(sNode, neighbors) {
 }
 
 function txState(currentNodes, txRate, newState) {
-  //var txCount = currentNodes.length * txRate;
   for(var e=0; e < currentNodes.length; e++) {
-      if(Math.random() < txRate) {
+      if(Math.random() < txRate && currentNodes[e].t != day) {
+        console.log("[node-" + e + " changed from " + currentNodes[e].state + " to " + newState);
         currentNodes[e].state = newState;
+        currentNodes[e].t = day;
       }
   }
-}
-
-function exposed2ione(exposedNodes) {
-   txState(exposedNodes, alphaOne, 'INFECTED_ONE');
-}
-
-function ione2itwo(iOneNodes) {
-  txState(iOneNodes, alphaTwo, 'INFECTED_TWO');
-}
-
-function itwo2recovered(iTwoNodes) {
-  txState(iTwoNodes, gamma, 'RECOVERED');
 }
 
 
@@ -170,102 +172,99 @@ function simulate() {
    clearInterval(tick);
   }
 
-
    var i=0,
    n = nodes.length;
-   var exposedNodes = [];
-   var iOneNodes = [];
-   var iTwoNodes = [];
+   var bucketNodes = {};
+   var bucketCounts = {};
+
+   for(var j=buckets.length-1; j >= 0; j--) {
+     bucketNodes[buckets[j].name] = [];
+     bucketCounts[buckets[j].name] = 0;
+   }
 
   for(i = 0; i<n; i++) {
-    if(nodes[i].state == 'EXPOSED') {
-      exposedNodes.push(nodes[i]);
-    } else if(nodes[i].state == 'INFECTED_ONE') {
-      iOneNodes.push(nodes[i]);
-    } else if(nodes[i].state == 'INFECTED_TWO') {
-      iTwoNodes.push(nodes[i]);
-    } else if (nodes[i].state == 'SUSCEPTIBLE') {
-      var neighbors = closestNeighbors(i);
-      s2ione(nodes[i],neighbors);
+    if(nodes[i].state != 'SUSCEPTIBLE') {
+      for(var j=buckets.length-1; j >= 0; j--) {
+        if(buckets[j].alpha > 0 && nodes[i].state == buckets[j].name) {
+            bucketNodes[buckets[j].name].push(nodes[i]);
+        }
+      }
     }
   }
-  itwo2recovered(iTwoNodes);
-  ione2itwo(iOneNodes);
-  exposed2ione(exposedNodes);
-  svg.selectAll("circle").style("fill", getCircleColor);
 
-
-  var exposedCount = 0,
-      infectedOneCount = 0,
-      infectedTwoCount = 0,
-      recoveredCount =0,
-      sCount=0;
+  for(var j=buckets.length-1; j >= 0; j--) {
+    txState(bucketNodes[buckets[j].name],buckets[j].alpha, buckets[j].nextState);
+  }
 
   for(i = 0; i<n; i++) {
-    if(nodes[i].state == 'EXPOSED') {
-      exposedCount++;
-    } else if(nodes[i].state == 'INFECTED_ONE') {
-      infectedOneCount++;
-    } else if(nodes[i].state == 'INFECTED_TWO') {
-      infectedTwoCount++;
-    } else if (nodes[i].state == 'RECOVERED') {
-      recoveredCount++;
+     if (nodes[i].state == 'SUSCEPTIBLE') {
+      var neighbors = closestNeighbors(i);
+      for(var j=buckets.length-1; j >= 0; j--) {
+        if(buckets[j].contactSpreadFlag) {
+          contactTx(nodes[i],neighbors, buckets[j]);
+        }
+      }
+    }
+  }
+
+  var sCount = 0;
+  for(i = 0; i<n; i++) {
+    if (nodes[i].state != 'SUSCEPTIBLE') {
+      bucketCounts[nodes[i].state]++;
     } else {
       sCount++;
     }
   }
-
-  d3.select("#dayCount").text("Day: " + (day-1));
-  d3.select("#population").text("Population:" + sCount);
-  d3.select("#exposedCount").text("Exposed: " + exposedCount);
-  d3.select("#infectedCount").text("Infected : " + (infectedOneCount+infectedTwoCount)
-  + "  (I1= " + infectedOneCount + ", I2=" + infectedTwoCount +")");
-  d3.select("#recoveredCount").text("Recovered:" + recoveredCount);
-  d3.select("#degreeOfContact").text("Computed degreeOfContact = " + degreeOfContact);
-  t += 1;
-  data[0].x.push(t);
-  data[0].y.push(sCount);
-  data[1].x.push(t);
-  data[1].y.push(exposedCount);
-  data[2].x.push(t);
-  data[2].y.push((infectedOneCount));
-  data[3].x.push(t);
-  data[3].y.push(infectedTwoCount);
-  data[4].x.push(t);
-  data[4].y.push(infectedOneCount+infectedTwoCount);
-  data[5].x.push(t);
-  data[5].y.push(recoveredCount);
-  Plotly.redraw('graphDiv');
-
-  var total = sCount + exposedCount
-    + infectedOneCount +infectedTwoCount + recoveredCount;
-
-  var row = d3.select('#tData').append('tr');
-  row.append('td').text(t)
-  row.append('td').text(sCount)
-  row.append('td').text(exposedCount)
-  row.append('td').text(infectedOneCount);
-  row.append('td').text(infectedTwoCount);
-  row.append('td').text(infectedOneCount+infectedTwoCount);
-  row.append('td').text(recoveredCount)
-  row.append('td').text(total);
-
-  d3.select('#daytd').text(t);
-  d3.select('#populationtd').text(sCount);
-  d3.select('#exposedCounttd').text(exposedCount);
-  d3.select('#infectedOneCounttd').text(infectedOneCount);
-  d3.select('#infectedTwoCounttd').text(infectedTwoCount);
-  d3.select('#infectedCounttd').text(infectedOneCount + infectedTwoCount);
-  d3.select('#recoveredCounttd').text(recoveredCount);
-  d3.select('#totalCounttd').text(total);
+  updateTableCounts(day, sCount, bucketCounts);
+  updateGraph(day, sCount, bucketCounts);
+  svg.selectAll("circle").style("fill", getCircleColor);
   randomMovement();
+}
+
+function updateGraph(day, sCount, bucketCounts) {
+  d3.select("#degreeOfContact").text("Computed degreeOfContact = " + degreeOfContact);
+  data[0].x.push(day);
+  data[0].y.push(sCount);
+
+  for(var j=0; j < buckets.length; j++) {
+    data[j+1].x.push(day);
+    data[j+1].y.push(bucketCounts[buckets[j].name]);
+  }
+
+  Plotly.redraw('graphDiv');
+}
+
+function updateTableRow(tCountsRow, day, sCount, bucketCounts) {
+  tCountsRow.append('td').text(day)
+  .attr("class","bucketCount");
+
+  tCountsRow.append('td').text(sCount)
+  .attr("class","bucketCount")
+    .style("background-color",blue);;
+
+  for(var j=0; j < buckets.length; j++) {
+    var tdText = bucketCounts[buckets[j].name];
+    tCountsRow.append('td').text(tdText)
+    .attr("class","bucketCount")
+    .style("background-color",buckets[j].color);
+  }
 
 }
 
+function updateTableCounts(day, sCount, bucketCounts) {
+    d3.select("#tCountsRow").remove();
+    var tCountsRow = d3.select('#tCounts').append('tr').attr('id', 'tCountsRow');
+    var tDetailsRow = d3.select('#tData').append('tr');
+    updateTableRow(tCountsRow,day, sCount, bucketCounts);
+    updateTableRow(tDetailsRow, day, sCount, bucketCounts);
+}
 
 var smallSteps = false;
 
 function randomMovement() {
+  if(day > 20)
+   movementRatio = 0.1;
+
   for(i = 0; i<nodes.length; i++){
     var currentX = d3.select("#individual-"+i).attr("cx");
     var currentY = d3.select("#individual-"+i).attr("cy");
@@ -297,28 +296,39 @@ function randomMovement() {
 
 
     var circle = d3.select("#individual-"+i);
-    circle.transition().duration(200)
+    circle.transition().duration(100)
         .attr("cx", cx)
         .attr("cy", cy)
         .each("end", function () {
     });
 
-    if(nodes[i].state == 'INFECTED_ONE') {
-      circle.attr("stroke-width",(distRadius - radius))
-      .attr("stroke",infectedOneColor)
-      .attr("stroke-opacity","0.5");
-    } else {
-      circle.attr("stroke-width",'0px');
+    var opacitySet = false;
+    for(var j=0; j < buckets.length; j++) {
+      if(nodes[i].state == buckets[j].name) {
+        if(buckets[j].contactSpreadFlag) {
+           opacitySet = true;
+           circle.attr("stroke-width",(distRadius - radius))
+           .attr("stroke",buckets[j].color)
+           .attr("stroke-opacity","0.5");
+         }
+      }
     }
+
+    if(!opacitySet) {
+      circle.attr("stroke-width",'0px')
+    }
+
   }
   smallSteps = true;
+  svg.selectAll("circle").style("fill", getCircleColor);
 }
 
 var tick;
 
 function simulateButtonClick() {
    startsim();
-   tick = setInterval(simulate, 500);
+   randomMovement();
+   tick = setInterval(simulate, 2000);
 }
 
 function pause() {
@@ -376,6 +386,21 @@ function refreshInput() {
     distRadius = radius * spreadRadiusFactor;
   }
 
+  infectedCompartmentsInput = document.getElementById("infectedCompartmentsInput");
+  infectedCompartmentsInput.value = infectedCompartments;
+  infectedCompartmentsInput.oninput = function() {
+    infectedCompartments = this.value;
+    initBuckets();
+    refreshTables();
+    resetGraph();
+  }
+
+  alphaOtherInput = document.getElementById("alphaOtherInput");
+  alphaOtherInput.value = alphaOther;
+  alphaOtherInput.oninput = function() {
+    alphaOther = this.value;
+  }
+
   NInput = document.getElementById("NInput");
   NInput.value = N;
   NInput.oninput = function() {
@@ -395,87 +420,99 @@ function resetGraph(){
       size: 8
     }
   };
+  data = [traceS];
 
-  traceE = {
-    x: [],
-    y: [],
-    name: 'Exposed',
-    type: 'scatter',
-    mode: 'lines+markers',
-    marker: {
-      color: exposedColor,
-      size: 8
-    }
-  };
-
-  traceI1 = {
-    x: [],
-    y: [],
-    name: 'Infected-1',
-    type: 'scatter',
-    mode: 'lines+markers',
-    marker: {
-      color: infectedOneColor,
-      size: 8
-    }
-  };
-
-  traceI2 = {
-    x: [],
-    y: [],
-    name: 'Infected-2',
-    type: 'scatter',
-    mode: 'lines+markers',
-    marker: {
-      color: infectedTwoColor,
-      size: 8
-    }
+  for(var j=0; j < buckets.length; j++) {
+    var traceBucket =  {
+      x: [],
+      y: [],
+      name: buckets[j].name,
+      type: 'scatter',
+      mode: 'lines+markers',
+      marker: {
+        color: buckets[j].color,
+        size: 8
+      }
+    };
+    data.push(traceBucket);
   }
-
-  traceI = {
-    x: [],
-    y: [],
-    name: 'Total Infected',
-    type: 'scatter',
-    mode: 'lines+markers',
-    marker: {
-      color: 'red',
-      size: 8
-    }
-  }
-
-  traceR = {
-    x: [],
-    y: [],
-    name: 'Recovered',
-    type: 'scatter',
-    mode: 'lines+markers',
-    marker: {
-      color: recoveredColor,
-      size: 8
-    }
-  };
-  t = 0;
-  data = [traceS, traceE, traceI1, traceI2, traceI, traceR];
   Plotly.newPlot('graphDiv', data);
 }
 
+function initBuckets() {
+  buckets = [];
+  buckets.push(new Bucket('EXPOSED', alphaOne, 'INFECTED_1', exposedColor,0.02));
+
+  for(var k=1; k <= infectedCompartments; k++) {
+    var nextState = 'INFECTED_' + (k+1);
+    var color;
+    var tx;
+
+    if(k==infectedCompartments) {
+      nextState = 'RECOVERED';
+      tx = gamma;
+    }
+
+    if(k==1) {
+      color = infectedOneColor;
+      tx = alphaOne;
+    } else if (k==2) {
+      color = infectedTwoColor;
+      tx = alphaTwo;
+    } else {
+      tx = alphaOther;
+      color = "hsl(" + Math.random() * 360 + ",100%,50%)";
+    }
+
+
+    var i1 = new Bucket('INFECTED_' + k, tx, nextState,color);
+
+    if(k==1) {
+      i1.setContactSpreadState(beta,q,'EXPOSED');
+    }
+
+    buckets.push(i1);
+  }
+
+  buckets.push(new Bucket('RECOVERED', 0, null, recoveredColor));
+}
+
+function refreshTables() {
+  d3.select("#tCountsRowHeading").remove();
+  d3.select("#tDetailsRowHeading").remove();
+
+  var tCountsRowHeading = d3.select('#tCounts').append('tr').attr('id', 'tCountsRowHeading');
+  var tDetailsRowHeading = d3.select('#tData').append('tr').attr('id', 'tDetailsRowHeading');
+
+  tCountsRowHeading.append('th').text('Day');
+  tCountsRowHeading.append('th').text('SUSCEPTIBLE');
+  tDetailsRowHeading.append('th').text('Day');
+  tDetailsRowHeading.append('th').text('SUSCEPTIBLE');
+  for(var j=0; j < buckets.length; j++) {
+    tCountsRowHeading.append('th').text(buckets[j].name);
+    tDetailsRowHeading.append('th').text(buckets[j].name);
+  }
+}
 
 function reset() {
-  N = 32;
+  N = 20;
   beta = 0.495;
   q = 0.95;
   gamma = 1/9;
   alphaOne = 0.2;
   alphaTwo = 0.2;
+  alphaOther = 0.2;
   initExposeRatio = 0.002;
   day = 0;
-  MAX_DAYS = 120;
+  MAX_DAYS = 40;
   movementRatio = 30;
   spreadRadiusFactor = 15;
-  radius = height/(N*2.1);
+  radius = height/(N*(spreadRadiusFactor/3));
   distRadius = radius*spreadRadiusFactor/3;
+  infectedCompartments = 2;
 
+  initBuckets();
+  refreshTables();
   refreshInput();
   resetGraph();
   nodes = [];

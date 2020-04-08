@@ -25,31 +25,18 @@
 
   <br/>
 
-  <div class="row">
-    <table id="tSummary">
-       <tr>
-         <th>Day</th>
-         <th>Susceptible</th>
-         <th>Exposed</th>
-         <th>Infected-1</th>
-         <th>Infected-2</th>
-         <th>Infected (I1+I2)</th>
-         <th>Recovered</th>
-         <th>Total</th>
-       </tr>
-       <tr>
-         <td class="counts dayCount" id="daytd">0</td>
-         <td class="counts population" id="populationtd">0</td>
-         <td class="counts exposedCount" id="exposedCounttd">0</td>
-         <td class="counts infectedOneCount" id="infectedOneCounttd">0</td>
-         <td class="counts infectedTwoCount" id="infectedTwoCounttd">0</td>
-         <td class="counts infectedCount" id="infectedCounttd">0</td>
-         <td class="counts recoveredCount" id="recoveredCounttd">0</td>
-         <td class="counts population" id="totalCounttd">0</td>
 
-       </tr>
+  <div class="row">
+    <table id="tCounts">
+      <tr id="tCountsRowHeading">
+      </tr>
+      <tr id="tCountsRow">
+      </tr>
     </table>
   </div>
+
+
+
 
 
   <h3> Parameters </h2>
@@ -95,6 +82,14 @@
       <input id="spreadRadiusFactorInput" name="spreadRadiusFactorInput" size="10px" min="1" max="5">
 
       <div class="brc"><br></div>
+      <label for="infectedCompartmentsInput">infectedCompartments:</label>
+      <input id="infectedCompartmentsInput" name="infectedCompartmentsInput" size="10px" min="1" max="5">
+
+      <div class="brc"><br></div>
+      <label for="alphaOtherInput">alphaOther:</label>
+      <input id="alphaOtherInput" name="alphaOtherInput" size="10px" min="1" max="5">
+
+      <div class="brc"><br></div>
       <p class="brc" id="degreeOfContact"> </p>
 
       <div style="height:20px;"><br></div>
@@ -108,15 +103,8 @@
   <h3> Day by Day Detail </h2>
   <div class="row">
     <table id="tData">
-       <tr>
-         <th>Day</th>
-         <th>Susceptible</th>
-         <th>Exposed</th>
-         <th>Infected-1</th>
-         <th>Infected-2</th>
-         <th>Infected (I1+I2)</th>
-         <th>Recovered</th>
-         <th>Total</th>
+       <tr id="tDetailsRowHeading">
+
        </tr>
 
     </table>
