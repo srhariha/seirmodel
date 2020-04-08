@@ -8,6 +8,7 @@
 
 <body id="page-top" class="index">
 
+  <h2>Epidemic Model Simulation </h2>
   <div class="row">
     <div class="column">
       <button class="button" onclick="simulateButtonClick()">Simulate</button>
@@ -16,10 +17,12 @@
   </div>
   <div class="row">
     <div class="column">
+      <h3>Population </h3>
       <div id="epidemic"></div>
     </div>
-    <div class="column">
-      <div id="graphDiv">
+    <div id="graphDivContainer" class="column">
+      <h3>Trend </h3>
+      <div id="graphDiv"> </div>
     </div>
   </div>
 
@@ -37,70 +40,19 @@
 
 
 
+  <h3> Parameters </h3>
+    <button class="button" onclick="updateParameter()">Update Parameter</button>
+    <br/>
+    <textarea id="parametersJson" sytle="display:none" cols="50" rows="50"></textarea>
 
+  <h3> Calculated parameters </h3>
 
-  <h3> Parameters </h2>
-
-  <div class="row">
-
-    <div class="column">
-
-      <div class="brc"><br></div>
-      <label for="NInput">N:</label>
-      <input id="NInput" name="NInput" size="10px" min="2" max="50">
-
-      <div class="brc"><br></div>
-      <label for="daysInput">Days:</label>
-      <input id="daysInput" name="daysInput" size="10px" min="2" max="100">
-
-      <div class="brc"><br></div>
-      <label for="betaInput">beta:</label>
-      <input id="betaInput" name="betaInput" size="10px" min="0" max="1">
-
-      <div class="brc"><br></div>
-      <label for="qInput">q:</label>
-      <input id="qInput" name="qInput" size="10px" min="0" max="1">
-
-      <div class="brc"><br></div>
-      <label for="alphaOneInput">alphaOne:</label>
-      <input id="alphaOneInput" name="alphaOneInput" size="10px" min="0" max="1">
-
-      <div class="brc"><br></div>
-      <label for="alphaTwoInput">alphaTwo:</label>
-      <input id="alphaTwoInput" name="alphaTwoInput" size="10px" min="0" max="1">
-
-      <div class="brc"><br></div>
-      <label for="gammaInput">gamma:</label>
-      <input id="gammaInput" name="gammaInput" size="10px" min="0" max="1">
-
-      <div class="brc"><br></div>
-      <label for="movementRatioInput">speed:</label>
-      <input id="movementRatioInput" name="movementRatioInput" size="10px" min="1" max="100">
-
-      <div class="brc"><br></div>
-      <label for="spreadRadiusFactorInput">degreeOfContact:</label>
-      <input id="spreadRadiusFactorInput" name="spreadRadiusFactorInput" size="10px" min="1" max="5">
-
-      <div class="brc"><br></div>
-      <label for="infectedCompartmentsInput">infectedCompartments:</label>
-      <input id="infectedCompartmentsInput" name="infectedCompartmentsInput" size="10px" min="1" max="5">
-
-      <div class="brc"><br></div>
-      <label for="alphaOtherInput">alphaOther:</label>
-      <input id="alphaOtherInput" name="alphaOtherInput" size="10px" min="1" max="5">
-
-      <div class="brc"><br></div>
-      <p class="brc" id="degreeOfContact"> </p>
-
-      <div style="height:20px;"><br></div>
-    </div>
-
-  </div>
+  <p class="brc" id="degreeOfContact"> </p>
 
 
 
 
-  <h3> Day by Day Detail </h2>
+  <h3> Day by Day Detail </h3>
   <div class="row">
     <table id="tData">
        <tr id="tDetailsRowHeading">

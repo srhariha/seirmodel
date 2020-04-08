@@ -1,0 +1,29 @@
+{
+    "N": 20,
+    "simulationPanel": {
+        "width": 600,
+        "height": 600
+    },
+    "maxDays": 60,
+    "movementRatio": 30,
+    "spreadRadiusFactor": 3,
+    "simulateSpeed":1000,
+    "radius": 20,
+    "buckets": [
+        {
+            "name": "INFECTED",
+            "color": "rgb(255,87,51)",
+            "alpha": 0.11,
+            "nextState": "RECOVERED",
+            "contactSpreadFlag": true,
+            "beta": 0.49,
+            "q": 0.95,
+            "contactSpreadState": "INFECTED",
+            "initRatio": 0.02
+        },
+        {
+            "name": "RECOVERED",
+            "color": "rgb(200,200,200)"
+        }
+    ]
+}

@@ -76,3 +76,22 @@ table, th, td {
   border: 1px solid black;
   text-align: center;
 }
+
+
+button {
+  color: white;
+  background-color: #5DADE2;
+  font-size: 14px;
+  border-radius: 25px;
+  padding: 10px;
+}
+
+h2, h3, h4, th {
+  color: #5DADE2;
+}
+
+textarea
+{
+   font-family:"Courier New", Times, serif;
+   font-size: 16px;
+}
