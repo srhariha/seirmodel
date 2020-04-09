@@ -8,7 +8,15 @@
 
 <body id="page-top" class="index">
 
+
   <h2>Epidemic Model Simulation </h2>
+  <p class="description">
+    <a href="https://en.wikipedia.org/wiki/Mathematical_modelling_of_infectious_disease">Mathematical models</a> can project how infectious diseases progress to show the likely outcome of an epidemic and help inform public health interventions.
+    The <b>SIR model</b> is one of the simplest compartmental models, and many models are derivatives of this basic form. The model consists of three compartments: <b>S</b> for the number of <b>s</b>usceptible, <b>I</b> for the number of <b>i</b>nfectious, and <b>R</b> for the number of <b>r</b>ecovered or deceased (or immune) individuals.
+    For many important infections there is a significant incubation period during which individuals have been infected but are not yet infectious themselves. During this period the individual is in compartment <b>E</b> (for exposed).
+    Use this tool to <span class="highlight">simulate and visualize</span> the spread of disease using different variations of this model. Update the parameters to run <i>custom</i> simulations.
+  </p>
+
   <div class="row">
     <div class="buttonLayout">
       <button class="button" onclick="sirSimulate()">SIR</button>
@@ -61,7 +69,15 @@
 
 
 
-
+ <h3>Reference </h3>
+    <ul>
+      <li>
+        The code is extension of Mike Irvine's blog post on <a href="https://sempwn.github.io/blog/2016/11/23/epidemic-model-js">CREATING EPIDEMIC MODELS IN JAVASCRIPT</a>
+      </li>
+      <li>
+        SIR model <a href="https://en.wikipedia.org/wiki/Mathematical_modelling_of_infectious_disease#The_SIR_model"> wiki </a>
+      </li>
+    </ul>
 
 
 

@@ -1,38 +1,44 @@
 var blue = d3.rgb(100,100,200);
 
+/* Global variables */
 var nodes = [];
-
-var width = 600,
-    height = 600,
-    N;
-
+var width;
+var height;
+var N;
 var day;
 var MAX_DAYS;
 var movementRatio;
 var spreadRadiusFactor;
 var infectedCompartments;
 var simulateSpeed;
-
 var radius;
 var distRadius;
+var pointGrid = d3.layout.grid().points();
+var buckets = [];
+var neighborCount = 0;
+var neighborSum = 0;
+var degreeOfContact;
+var tick;
+var smallSteps = false;
 
-var pointGrid = d3.layout.grid()
-  .points();
 
-var svg;
 
 /* Plotly*/
+var svg;
 var traceS = {};
 var data = [];
 var layout = {
   showlegend: true,
   legend: {
-    x: 1,
-    xanchor: 'right',
-    y: 1
+    x: 0.1,
+    y: 1.2,
+    orientation: 'h'
   }
 };
 
+/*
+ * Compartment bucket.
+ */
 class Bucket {
   constructor(bucketConfig) {
     this.name = bucketConfig.name;
@@ -47,8 +53,9 @@ class Bucket {
   }
 }
 
-var buckets = [];
-
+/*
+ * Get circle color.
+ */
 var getCircleColor = function(d,i) {
     var col = blue;
     for(var j=0; j < buckets.length; j++) {
@@ -59,6 +66,9 @@ var getCircleColor = function(d,i) {
     return col;
 }
 
+/*
+ * Initialize the node values.
+ */
 var initNode = function(d,i) {
   var n = {};
   n.id = i;
@@ -68,6 +78,9 @@ var initNode = function(d,i) {
   return n;
 }
 
+/*
+ * Initialize node states.
+ */
 function initState() {
   var stateIndex = 0;
   for(var j=0; j < buckets.length; j++) {
@@ -81,6 +94,9 @@ function initState() {
   }
 }
 
+/*
+ * Start the simulation run.
+ */
 function startsim() {
   svg = d3.select("#epidemic").append("svg")
     .attr({
@@ -103,15 +119,16 @@ function startsim() {
 
 }
 
-
+/*
+ * Distance between two circles
+ */
 function distance(x1,y1,x2,y2) {
   return Math.sqrt( ((x2-x1)*(x2-x1)) + ((y2-y1)*(y2-y1)) );
 }
 
-var neighborCount = 0;
-var neighborSum = 0;
-var degreeOfContact;
-
+/*
+ * Find closest neighbors.
+ */
 function closestNeighbors(ind){
   neighbors =[];
   var currentX = d3.select("#individual-"+ind).attr("cx");
@@ -135,6 +152,9 @@ function closestNeighbors(ind){
   return neighbors;
 }
 
+/*
+ * Contact transformation.
+ */
 function contactTx(sNode, neighbors, bucket) {
   for(var ni=0; ni < neighbors.length; ni++) {
        var nNode = nodes[neighbors[ni]];
@@ -148,17 +168,21 @@ function contactTx(sNode, neighbors, bucket) {
   }
 }
 
+/*
+ *  Transformation state change.
+ */
 function txState(currentNodes, txRate, newState) {
   for(var e=0; e < currentNodes.length; e++) {
       if(Math.random() < txRate && currentNodes[e].t != day) {
-        //console.log("[node-" + e + " changed from " + currentNodes[e].state + " to " + newState);
         currentNodes[e].state = newState;
         currentNodes[e].t = day;
       }
   }
 }
 
-
+/*
+ * Simiulate.
+ */
 function simulate() {
   randomMovement();
 
@@ -188,7 +212,7 @@ function simulate() {
    clearInterval(tick);
   }
 
-
+  // transform states
   for(i = 0; i<n; i++) {
     if(nodes[i].state != 'SUSCEPTIBLE') {
       for(var j=buckets.length-1; j >= 0; j--) {
@@ -203,6 +227,7 @@ function simulate() {
     txState(bucketNodes[buckets[j].name],buckets[j].alpha, buckets[j].nextState);
   }
 
+  // contact tx
   for(i = 0; i<n; i++) {
      if (nodes[i].state == 'SUSCEPTIBLE') {
       var neighbors = closestNeighbors(i);
@@ -214,10 +239,12 @@ function simulate() {
     }
   }
 
-
   svg.selectAll("circle").style("fill", getCircleColor);
 }
 
+/*
+ * Update graph
+ */
 function updateGraph(day, sCount, bucketCounts) {
   d3.select("#degreeOfContact").text("Computed degreeOfContact = " + degreeOfContact);
   data[0].x.push(day);
@@ -231,6 +258,9 @@ function updateGraph(day, sCount, bucketCounts) {
   Plotly.newPlot('graphDiv',data, layout);
 }
 
+/*
+ * Update table rows.
+ */
 function updateTableRow(tCountsRow, day, sCount, bucketCounts) {
   tCountsRow.append('td').text(day)
   .attr("class","bucketCount");
@@ -248,6 +278,9 @@ function updateTableRow(tCountsRow, day, sCount, bucketCounts) {
 
 }
 
+/*
+ * Update table counts.
+ */
 function updateTableCounts(day, sCount, bucketCounts) {
     d3.select("#tCountsRow").remove();
     var tCountsRow = d3.select('#tCounts').append('tr').attr('id', 'tCountsRow');
@@ -256,34 +289,36 @@ function updateTableCounts(day, sCount, bucketCounts) {
     updateTableRow(tDetailsRow, day, sCount, bucketCounts);
 }
 
-var smallSteps = false;
+/*
+ * New position.
+ */
+function newPosition(currentP) {
+  var sign = 1;
+  var newP;
+  if(Math.random()*100 > 50)
+    sign = -1*sign;
 
+  newP = parseFloat(currentP) + sign*(Math.random() * movementRatio);
+
+  if(newP >= width - 10 || newP < 10) {
+    newP = parseFloat(currentP) + sign*-1*(Math.random() * movementRatio);
+  }
+  return newP;
+}
+
+/*
+ * Randomly move the circles.
+ */
 function randomMovement() {
 
   for(i = 0; i<nodes.length; i++){
     var currentX = d3.select("#individual-"+i).attr("cx");
     var currentY = d3.select("#individual-"+i).attr("cy");
     var cx,cy;
-    var sign = 1;
 
     if(smallSteps) {
-      if(Math.random()*100 > 50)
-        sign = -1*sign;
-
-      cx = parseFloat(currentX) + sign*(Math.random() * movementRatio);
-
-      if(cx >= width - 10 || cx < 10) {
-        cx = parseFloat(currentX) + sign*-1*(Math.random() * movementRatio);
-      }
-
-      if(Math.random()*100 > 50)
-        sign = -1*sign;
-
-      cy = parseFloat(currentY) + sign*(Math.random() * movementRatio);
-
-      if(cy >= height - 10 || cy < 10) {
-        cy = parseFloat(currentY) + sign*-1*(Math.random() * movementRatio);
-      }
+      cx = newPosition(currentX);
+      cy = newPosition(currentY);
     } else {
       cx = Math.random() * width;
       cy = Math.random() * height;
@@ -318,8 +353,9 @@ function randomMovement() {
   svg.selectAll("circle").style("fill", getCircleColor);
 }
 
-var tick;
-
+/*
+ * Run the simulation.
+ */
 function runSimulate(config) {
   if(tick)
     clearInterval(tick);

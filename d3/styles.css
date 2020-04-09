@@ -60,6 +60,11 @@
   color: black;
 }
 
+.highlight {
+  color: #4CAF50;
+  font-size: 18px;
+}
+
 label {
   display: inline-block;
   width: 140px;
@@ -68,6 +73,9 @@ label {
   color:rgb(100,200,100);
 }​
 
+.description {
+  font-family: Arial, Helvetica, sans-serif;
+}
 
 td, th {
   width:200px;
