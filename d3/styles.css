@@ -1,3 +1,9 @@
+.epidemicDiv {
+  text-align: center;
+  margin: auto;
+  width: 60%;
+}
+
 .column {
   float: left;
   width: 50%;

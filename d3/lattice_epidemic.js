@@ -20,11 +20,12 @@ var neighborSum = 0;
 var degreeOfContact;
 var tick;
 var smallSteps = false;
+var bucketCounts_math = [];
+var svg;
 
 
 
 /* Plotly*/
-var svg;
 var traceS = {};
 var data = [];
 var layout = {
@@ -35,6 +36,9 @@ var layout = {
     orientation: 'h'
   }
 };
+
+var traceS_math = {};
+var data_math = [];
 
 /*
  * Compartment bucket.
@@ -180,6 +184,42 @@ function txState(currentNodes, txRate, newState) {
   }
 }
 
+function mathSimulate(sCount, bucketCounts) {
+  var n = bucketCounts_math.length;
+  if(n == 0) {
+    var newCount = {};
+    newCount['SUSCEPTIBLE'] = sCount;
+    for(var j=0; j < buckets.length; j++) {
+      newCount[buckets[j].name] = bucketCounts[buckets[j].name];
+    }
+    bucketCounts_math.push(newCount);
+  } else {
+    var newCount = {};
+    var lastCount = bucketCounts_math[n-1];
+
+    newCount['SUSCEPTIBLE'] = lastCount['SUSCEPTIBLE'];
+    for(var j=0; j < buckets.length; j++) {
+      newCount[buckets[j].name] = lastCount[buckets[j].name];
+    }
+
+    for(var j=0; j < buckets.length; j++) {
+      if(buckets[j].alpha > 0) {
+        var rate = lastCount[buckets[j].name] * buckets[j].alpha;
+        newCount[buckets[j].name] = newCount[buckets[j].name] - rate;
+        newCount[buckets[j].nextState] = newCount[buckets[j].nextState] + rate;
+      }
+      if(buckets[j].contactSpreadFlag) {
+        var rate = buckets[j].beta * buckets[j].q * lastCount[buckets[j].name] * lastCount['SUSCEPTIBLE'] / (N*N);
+        newCount['SUSCEPTIBLE'] = lastCount['SUSCEPTIBLE'] - rate;
+        newCount[buckets[j].contactSpreadState] = newCount[buckets[j].contactSpreadState] + rate;
+      }
+    }
+
+    bucketCounts_math.push(newCount);
+  }
+
+}
+
 /*
  * Simiulate.
  */
@@ -204,6 +244,7 @@ function simulate() {
       sCount++;
     }
   }
+  mathSimulate(sCount, bucketCounts);
   updateTableCounts(day, sCount, bucketCounts);
   updateGraph(day, sCount, bucketCounts);
 
@@ -249,13 +290,24 @@ function updateGraph(day, sCount, bucketCounts) {
   d3.select("#degreeOfContact").text("Computed degreeOfContact = " + degreeOfContact);
   data[0].x.push(day);
   data[0].y.push(sCount);
+  var lastMathCount = bucketCounts_math[bucketCounts_math.length-1];
+
+  if(lastMathCount) {
+    data_math[0].x.push(day);
+    data_math[0].y.push(lastMathCount['SUSCEPTIBLE']);
+  }
 
   for(var j=0; j < buckets.length; j++) {
     data[j+1].x.push(day);
     data[j+1].y.push(bucketCounts[buckets[j].name]);
+    if(lastMathCount) {
+      data_math[j+1].x.push(day);
+      data_math[j+1].y.push(lastMathCount[buckets[j].name]);
+    }
   }
 
   Plotly.newPlot('graphDiv',data, layout);
+  Plotly.newPlot('graphDiv_math',data_math, layout);
 }
 
 /*
@@ -264,6 +316,7 @@ function updateGraph(day, sCount, bucketCounts) {
 function updateTableRow(tCountsRow, day, sCount, bucketCounts) {
   tCountsRow.append('td').text(day)
   .attr("class","bucketCount");
+
 
   tCountsRow.append('td').text(sCount)
   .attr("class","bucketCount")
@@ -283,10 +336,15 @@ function updateTableRow(tCountsRow, day, sCount, bucketCounts) {
  */
 function updateTableCounts(day, sCount, bucketCounts) {
     d3.select("#tCountsRow").remove();
+    d3.select("#tCountsRowMath").remove();
+
     var tCountsRow = d3.select('#tCounts').append('tr').attr('id', 'tCountsRow');
     var tDetailsRow = d3.select('#tData').append('tr');
+    var tCountsMathRow = d3.select('#tCountsMath').append('tr').attr('id', 'tCountsRowMath');
+
     updateTableRow(tCountsRow,day, sCount, bucketCounts);
     updateTableRow(tDetailsRow, day, sCount, bucketCounts);
+    updateTableRow(tCountsMathRow, day, bucketCounts_math[bucketCounts_math.length-1]['SUSCEPTIBLE'], bucketCounts_math[bucketCounts_math.length-1]);
 }
 
 /*
@@ -394,7 +452,19 @@ function resetGraph(){
       size: 8
     }
   };
+  traceS_math = {
+    x: [],
+    y: [],
+    name: 'Susceptible',
+    type: 'scatter',
+    mode: 'lines+markers',
+    marker: {
+      color: blue,
+      size: 8
+    }
+  };
   data = [traceS];
+  data_math = [traceS_math];
 
   for(var j=0; j < buckets.length; j++) {
     var traceBucket =  {
@@ -408,25 +478,45 @@ function resetGraph(){
         size: 8
       }
     };
+    var traceBucket_math =  {
+      x: [],
+      y: [],
+      name: buckets[j].name,
+      type: 'scatter',
+      mode: 'lines+markers',
+      marker: {
+        color: buckets[j].color,
+        size: 8
+      }
+    };
     data.push(traceBucket);
+    data_math.push(traceBucket_math);
   }
+
   Plotly.newPlot('graphDiv',data, layout);
+  Plotly.newPlot('graphDiv_math',data_math, layout);
+
 }
 
 
 function refreshTables() {
   d3.select("#tCountsRowHeading").remove();
+  d3.select("#tCountsRowHeadingMath").remove();
   d3.select("#tData").selectAll("tr").remove();
 
   var tCountsRowHeading = d3.select('#tCounts').append('tr').attr('id', 'tCountsRowHeading');
+  var tCountsRowMathHeading = d3.select('#tCountsMath').append('tr').attr('id', 'tCountsRowHeadingMath');
   var tDetailsRowHeading = d3.select('#tData').append('tr').attr('id', 'tDetailsRowHeading');
 
   tCountsRowHeading.append('th').text('Day');
   tCountsRowHeading.append('th').text('SUSCEPTIBLE');
+  tCountsRowMathHeading.append('th').text('Day');
+  tCountsRowMathHeading.append('th').text('SUSCEPTIBLE');
   tDetailsRowHeading.append('th').text('Day');
   tDetailsRowHeading.append('th').text('SUSCEPTIBLE');
   for(var j=0; j < buckets.length; j++) {
     tCountsRowHeading.append('th').text(buckets[j].name);
+    tCountsRowMathHeading.append('th').text(buckets[j].name);
     tDetailsRowHeading.append('th').text(buckets[j].name);
   }
 }
@@ -439,9 +529,9 @@ var sei1i2rConfig = {
   },
   maxDays:60,
   simulateSpeed:1000,
-  movementRatio:30,
+  movementRatio:20,
   spreadRadiusFactor:2,
-  radius:20,
+  radius:15,
   buckets: [
     {
       name: 'EXPOSED',
@@ -480,10 +570,10 @@ var sirConfig = {
         height: 600
     },
     maxDays: 60,
-    movementRatio: 30,
-    spreadRadiusFactor: 3,
+    movementRatio: 20,
+    spreadRadiusFactor: 2,
     simulateSpeed:1000,
-    radius: 20,
+    radius: 15,
     buckets: [
         {
             name: "INFECTED",
@@ -510,10 +600,10 @@ var seirConfig = {
         height: 600
     },
     maxDays: 60,
-    movementRatio: 30,
+    movementRatio: 20,
     spreadRadiusFactor: 3,
     simulateSpeed:1000,
-    radius: 20,
+    radius: 10,
     buckets: [
      {
     name: "EXPOSED",
@@ -555,6 +645,7 @@ function reset(config) {
   radius = config.radius;
   simulateSpeed = config.simulateSpeed;
   buckets = [];
+  bucketCounts_math = [];
 
   for(var i in config.buckets){
     buckets.push(new Bucket(config.buckets[i]));
@@ -570,7 +661,9 @@ function reset(config) {
   nodes = [];
   smallSteps = false;
   d3.select("svg").remove();
+
 }
 
 //reset(defaultConfig);
 Plotly.newPlot('graphDiv', data, layout);
+Plotly.newPlot('graphDiv_math', data_math, layout);
